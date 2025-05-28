@@ -11,6 +11,7 @@
 
 #define READ_END 0
 #define WRITE_END 1
+//Tuve que declarar las funciones porque me marcaba error, no deberia marcaar error pero bueno
 void crearElArgs(char *instrucciones, char *args[]);
 void lecturaDeLaTerminalSuperEpico(char **lecturaDeLaTerminal);
 void limpiarArgs(char *args[], int tamano);
@@ -115,6 +116,14 @@ void crearElArgs(char *instrucciones, char *args[])
     args[cantidadDeArgumentos] = NULL;
     // printf("Se creo el args \n");
 }
+void limpiarArgs(char *args[], int tamano)
+{
+    for (int i = 0; i < tamano; i++)
+    {
+        args[i] = NULL;
+    }
+}
+
 // Se usa el doble puntero, para poder cambiar el valor origial
 // Esto debido a que se trabaja con el realloc ya que cambia el tamaño y todo eso
 void lecturaDeLaTerminalSuperEpico(char **lecturaDeLaTerminal)
@@ -133,13 +142,6 @@ void lecturaDeLaTerminalSuperEpico(char **lecturaDeLaTerminal)
         c = getchar();
     }
     tmp[0] = 0;
-}
-void limpiarArgs(char *args[], int tamano)
-{
-    for (int i = 0; i < tamano; i++)
-    {
-        args[i] = NULL;
-    }
 }
 
 int main(void)
@@ -184,12 +186,17 @@ int main(void)
         }
         else
         {
+
+            //Lo de aqui abajo es para detectar comandos que creamos
+            //En este caso el lstprocss,
             if (strcmp(Palabras[0], "lstprocss") == 0)
             {
                 imprimirLaLista(&head);
             }
             else
             {
+                //Aqui se hace mas cosas porque el mkprocss espera parametros
+                //Pero se puede usar esta logica para los otros comandos que vamos a utilzar
                 char ingresarProceso[strlen(Palabras[0]) + 1];
                 char *instruccion; // Verificar si esta bien escrita la instruccion
                 strcpy(ingresarProceso, Palabras[0]);
@@ -197,7 +204,7 @@ int main(void)
                 instruccion = strtok(ingresarProceso, " ");
                 if (strcmp(instruccion, "mkprocss")==0)
                 {
-
+                    //Logica del funcionamiento de mkprocss
                     char *nombreConPuntero = strtok(NULL, " ");
                     char nombre[50];
                     strncpy(nombre,nombreConPuntero,sizeof(nombre)-1);
@@ -220,6 +227,7 @@ int main(void)
                 }
                 else
                 {
+                    //Si llega aqui es porque es un comando de la terminal y no es de los inventados
                     ejecutarCodigo(cantidadDePips, Palabras);
                 }
             }
