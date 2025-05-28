@@ -7,11 +7,12 @@
 #include <fcntl.h>
 #include <string.h>
 #include "colors.h"
-#include "lista.h"
+#include "calendarizacionProcesos.h"
 
 #define READ_END 0
 #define WRITE_END 1
-//Tuve que declarar las funciones porque me marcaba error, no deberia marcaar error pero bueno
+#define NOMBRE_ARCHIVO_PROCESOS "guardarProcesos.bin"
+// Tuve que declarar las funciones porque me marcaba error, no deberia marcaar error pero bueno
 void crearElArgs(char *instrucciones, char *args[]);
 void lecturaDeLaTerminalSuperEpico(char **lecturaDeLaTerminal);
 void limpiarArgs(char *args[], int tamano);
@@ -146,15 +147,17 @@ void lecturaDeLaTerminalSuperEpico(char **lecturaDeLaTerminal)
 
 int main(void)
 {
+    //Recordatorio es muy recomendable usar como open, close y asi, funciones de linux
     nodo_s *head = NULL;
-    leerDeDocumento(&head, "guardarProcesos.bin");
+    leerDeDocumento(&head, NOMBRE_ARCHIVO_PROCESOS);
+    //Creo que se deberia tener otra lista para determinar los bloques de memoria o algoa si
     char *Palabras[5]; // es en donde se guardara los comando
     // Ejemplo ls|head -1 -> palabras[0]=ls, palabras[1]= head -1
     int cantidadDePips = 0; // Describe la cantidad de | que hay
 
     while (1)
     {
-        printf(LGREEN "\n manuel@manuel-PcGamerProRGB: " RESET);
+        printf(LGREEN "\n manuelYGuillermo@PcGamerProRGB: " RESET);
         char *lecturaDeLaTerminal = malloc(1);
         lecturaDeLaTerminalSuperEpico(&lecturaDeLaTerminal);
         // printf("Lectura : %s\n",lecturaDeLaTerminal);
@@ -186,50 +189,102 @@ int main(void)
         }
         else
         {
-
-            //Lo de aqui abajo es para detectar comandos que creamos
-            //En este caso el lstprocss,
-            if (strcmp(Palabras[0], "lstprocss") == 0)
+            // Aqui se hace mas cosas porque el mkprocss espera parametros
+            // Pero se puede usar esta logica para los otros comandos que vamos a utilzar
+            char ingresarProceso[strlen(Palabras[0]) + 1];
+            char *instruccion; // Verificar si esta bien escrita la instruccion
+            strcpy(ingresarProceso, Palabras[0]);
+            ingresarProceso[strlen(ingresarProceso) + 1] = '\0'; // Cerrar la cadena por si acaso, just in case
+            instruccion = strtok(ingresarProceso, " ");
+            int ejecuto = 0;
+            // Se usara varios if para
+            // evitar el super acordeon de if else
+            // Se usa ademas para tener mejor redaccion
+            if (strcmp(instruccion, "sfj") == 0)
             {
+                ejecuto = 1;
+                sjf(&head, NOMBRE_ARCHIVO_PROCESOS);
+            }
+            if (strcmp(instruccion, "fcfs") == 0)
+            {
+                ejecuto = 1;
+                fcfs(&head, NOMBRE_ARCHIVO_PROCESOS);
+            }
+            if (strcmp(instruccion, "roundrobin") == 0)
+            {
+                ejecuto = 1;
+                roundrobin(&head, NOMBRE_ARCHIVO_PROCESOS);
+            }
+            // En este caso el lstprocss,
+            if (strcmp(instruccion, "lstprocss") == 0)
+            {
+                ejecuto = 1;
                 imprimirLaLista(&head);
             }
-            else
+            if (strcmp(instruccion, "mykill") == 0)
             {
-                //Aqui se hace mas cosas porque el mkprocss espera parametros
-                //Pero se puede usar esta logica para los otros comandos que vamos a utilzar
-                char ingresarProceso[strlen(Palabras[0]) + 1];
-                char *instruccion; // Verificar si esta bien escrita la instruccion
-                strcpy(ingresarProceso, Palabras[0]);
-                ingresarProceso[strlen(ingresarProceso) + 1] = '\0'; // Cerrar la cadena por si acaso, just in case
-                instruccion = strtok(ingresarProceso, " ");
-                if (strcmp(instruccion, "mkprocss")==0)
+                char *nombreConPuntero = strtok(NULL, " ");
+                char nombre[50];
+                strncpy(nombre, nombreConPuntero, sizeof(nombre) - 1);
+                nombre[49] = '\0';
+                ejecuto = 1;
+                eliminarPorID(&head,nombre);
+                escribirEnDocumento(&head,NOMBRE_ARCHIVO_PROCESOS);
+            }
+        
+            if (strcmp(instruccion, "mkprocss") == 0)
+            {
+
+                ejecuto = 1;
+                char *saveptr;
+                // Logica del funcionamiento de mkprocss
+                char *nombreConPuntero = strtok(NULL, " ");
+                char nombre[50];
+                strncpy(nombre, nombreConPuntero, sizeof(nombre) - 1);
+                nombre[49] = '\0';
+                char *burstTimeEnChar = strtok(NULL, " ");
+                int burstTime = atoi(burstTimeEnChar);
+                char *bloqueDeMemoriaEnChar = strtok(NULL, " ");
+                int bloqueDeMemoria = atoi(bloqueDeMemoriaEnChar);
+
+                if (nombre != NULL && burstTimeEnChar != NULL && bloqueDeMemoria != NULL)
                 {
-                    //Logica del funcionamiento de mkprocss
-                    char *nombreConPuntero = strtok(NULL, " ");
-                    char nombre[50];
-                    strncpy(nombre,nombreConPuntero,sizeof(nombre)-1);
-                    nombre[49]='\0';
-                    char *burstTimeEnChar = strtok(NULL, " ");
-                    int burstTime = atoi(burstTimeEnChar);
-                    if (nombre != NULL && burstTimeEnChar != NULL)
+                    if (existeElID(&head, nombre) == 0)
                     {
+
                         proceso_s procesoAIngresar;
-                        strncpy(procesoAIngresar.nombreProceso,nombre,sizeof(procesoAIngresar.nombreProceso)-1);
-                        procesoAIngresar.nombreProceso[sizeof(procesoAIngresar.nombreProceso)-1]='\0';
-                        procesoAIngresar.burstTime=burstTime;
-                        procesoAIngresar.ID=-99;
-                        int fd = open("guardarProcesos.bin", O_CREAT | O_WRONLY | O_APPEND, S_IRWXO | S_IRWXU);
+                        strncpy(procesoAIngresar.nombreProceso, nombre, sizeof(procesoAIngresar.nombreProceso) - 1);
+                        procesoAIngresar.nombreProceso[sizeof(procesoAIngresar.nombreProceso) - 1] = '\0';
+                        procesoAIngresar.burstTime = burstTime;
+                        procesoAIngresar.bloque = bloqueDeMemoria;
+                        procesoAIngresar.ID = -99;
+                        //Para hacer las pruebas hice que fuera ready
+                        //pero ready debe ser dado por alloc
+                        strcpy(procesoAIngresar.estado, "new");
+                        procesoAIngresar.estado[sizeof("new") + 1] = '\0';
+                        int fd = open(NOMBRE_ARCHIVO_PROCESOS, O_CREAT | O_WRONLY | O_APPEND, S_IRWXO | S_IRWXU);
                         write(fd, &procesoAIngresar, sizeof(proceso_s));
                         close(fd);
-                        insertarAlFinal(&head,procesoAIngresar);
+                        insertarAlFinal(&head, procesoAIngresar);
                         printf("Ingresado satisfactoriamente. \n");
                     }
+                    else
+                    {
+                        printf("Ya existe el ID");
+                    }
                 }
-                else
-                {
-                    //Si llega aqui es porque es un comando de la terminal y no es de los inventados
-                    ejecutarCodigo(cantidadDePips, Palabras);
-                }
+            }
+            // Si no se ejecuto nada
+            if (ejecuto == 0)
+            {
+                //Ejecuta las instrucciones en la terminal
+                ejecutarCodigo(cantidadDePips, Palabras);
+            }
+            // Limpiarlo para asegurar
+            char *token = strtok(NULL, " ");
+            while (token != 0)
+            {
+                token = strtok(NULL, " ");
             }
         }
 

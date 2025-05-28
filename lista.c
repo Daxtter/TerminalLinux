@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <sys/stat.h>
+#include <string.h>
 
 #include "lista.h"
 void insertarEnLista(proceso_s mi_pid, nodo_s **head)
@@ -39,7 +41,7 @@ void imprimirLaLista(nodo_s **head)
         while (aux != NULL)
         {
             numero++;
-            printf("No. %d nombre :%s , Burst time:%d  \n", aux->pid.ID, aux->pid.nombreProceso, aux->pid.burstTime);
+            printf("No. %d nombre :%s , Burst time:%d ,Tamano en bloques: %d ,Estado: %s \n", aux->pid.ID, aux->pid.nombreProceso, aux->pid.burstTime, aux->pid.bloque, aux->pid.estado);
             aux = aux->sig;
         };
     }
@@ -235,7 +237,25 @@ void eliminarAlFinal(nodo_s **head)
         }
     }
 }
-
+void eliminarPorID(nodo_s **head, char *ID)
+{
+    int tamano = 0;
+    nodo_s *aux = (*head);
+    if (aux != NULL)
+    {
+        while (aux != NULL)
+        {
+            
+            if (strcmp(aux->pid.nombreProceso, ID) == 0)
+            {
+                eliminarElementoEnPosicion(head,tamano);
+                break;
+            }
+            tamano++;
+            aux=aux->sig;
+        }
+    }
+}
 void leerDeDocumento(nodo_s **head, char *nombreDelDocumento)
 {
     proceso_s nuevoProceso;
@@ -246,23 +266,86 @@ void leerDeDocumento(nodo_s **head, char *nombreDelDocumento)
     while (final > 0)
     {
         nuevoProceso.ID = contador;
-        insertarAlFinal(head,nuevoProceso);
+        insertarAlFinal(head, nuevoProceso);
         final = read(fd, &nuevoProceso, sizeof(proceso_s));
         contador++;
     }
     close(fd);
 }
-void escribirEnDocumento(nodo_s **head, char* nombreDelDocumento){
-    printf("Luego se implementa");
+void escribirEnDocumento(nodo_s **head, char *nombreDelDocumento)
+{
+    nodo_s *aux = (*head);
+    if (aux != NULL)
+    {
+        int fd = open(nombreDelDocumento, O_CREAT | O_WRONLY, S_IRWXO | S_IRWXU);
+        while (aux != NULL)
+        {
+            write(fd, &aux->pid, sizeof(proceso_s));
+            aux = aux->sig;
+        }
+        close(fd);
+    }
 }
-int obtenerElTamano(nodo_s **head){
-    int tamano=0;
-    nodo_s *aux = (* head);
-    if(aux!=NULL){
-        while(aux!=NULL){
+int agregarElementoAlDocumento(nodo_s **head, char *nombreDelDocumento)
+{
+    // Este metodo los agrega primero desde el final hasta el inicio
+    // Si regresa 0 es porque head es NULL, es decir se acabo
+    if ((*head) == NULL)
+        return 0;
+    nodo_s *aux = (*head);
+    nodo_s *aux2 = aux;
+    while (aux->sig != NULL)
+    {
+        aux2 = aux;     // Mantiene elevo valor valor anterior
+        aux = aux->sig; // Asigna el nu
+    };
+    int fd = open(nombreDelDocumento, O_CREAT | O_WRONLY | O_APPEND, S_IRWXO | S_IRWXU);
+    write(fd, &aux->pid, sizeof(proceso_s));
+    close(fd);
+    if (aux == (*head))
+    {
+        (*head) = NULL;
+        free(aux);
+    }
+    else
+    {
+
+        aux2->sig = NULL; // El anterior dice que no tiene nada siguiente
+        free(aux);        // Se elimina de la memoria
+    }
+
+    return 1;
+}
+int obtenerElTamano(nodo_s **head)
+{
+    int tamano = 0;
+    nodo_s *aux = (*head);
+    if (aux != NULL)
+    {
+        while (aux != NULL)
+        {
             tamano++;
             aux = aux->sig;
         }
     }
+    return tamano;
+}
+int existeElID(nodo_s **head, char *ID)
+{
+    int tamano = 0;
+    nodo_s *aux = (*head);
+    if (aux != NULL)
+    {
+        while (aux != NULL)
+        {
+            if (strcmp(aux->pid.nombreProceso, ID) == 0)
+            {
+                tamano = 1;
+                break;
+            }
+            aux = aux->sig;
+        }
+    }
+    // free(aux);
     return tamano;
 }
